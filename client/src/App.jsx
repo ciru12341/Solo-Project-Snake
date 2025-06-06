@@ -6,7 +6,8 @@ function App() {
 
   return (
     <div>
-      <Canvas width='800' height='500' style={{background: 'black'}}/>
+      <h1>My snakessssssss</h1>
+      <Canvas width='600' height='400' style={{background: 'black'}}/>
     </div>
   )
 }

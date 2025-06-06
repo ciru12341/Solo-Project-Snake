@@ -1,22 +1,41 @@
 import {useState, useEffect, useRef} from 'react'
 
-const testArray = [{x: 40, y: 20},{x: 40, y: 10},{x: 30, y: 10},{x: 20, y: 10},{x: 10, y: 10},{x: 10, y: 20}]; //change to useState
+// everything taht is not a hook -> into new file
+
+
+// !TODO -> Fix that game doesnt stop when arrowkey is hold down
 
 
 export default function Canvas(props) {
   const ref = useRef();
+
   const [dir, setDir] = useState({ x: 10, y: 0 });
+
   const [food, setFood] = useState({x: 200, y:200});
 
-    const spawnFood = () => {
-      const newFood = {x: Math.floor(Math.random()*800), y: Math.floor(Math.random()*500)} // change 800 and 500 to variable
-      if (testArray[0].x == food.x && testArray[0].y == food.y) {
-        spawnFood();
-      } else {
-        setFood(newFood);
-      }
-    }
+  const [snake, setSnake] = useState([{x: 40, y: 20}, {x: 40, y: 10}, {x: 30, y: 10}, {x: 20, y: 10}]);
 
+  const snakeRef = useRef(snake);
+
+  const dirRef = useRef(dir);
+
+  useEffect(() => {
+    dirRef.current = dir;
+  }, [dir]);
+
+  useEffect(() => {
+    snakeRef.current = snake;
+  }, [snake]);
+
+  const spawnFood = () => {
+    const newFood = {x: Math.floor(Math.random() * (props.width-10) / 10) * 10, y: Math.floor(Math.random() * (props.height-10) / 10) * 10}
+    if (snake.some(food => food.x === newFood.x && food.y === newFood.y)) {
+      spawnFood();
+    } else {
+      console.log(`Food spawned at: x: ${newFood.x} y: ${newFood.y}`)
+      setFood(newFood);
+    }
+  }
 
   const direction = (key) => {
     if (key == 'ArrowUp') {
@@ -32,26 +51,43 @@ export default function Canvas(props) {
 
   const update = () => {
     // console.log(JSON.parse(JSON.stringify(testArray)));
-    for (let i = testArray.length-1; i >= 0; i--) {
-      if (i == 0) {
-        testArray[i] = {x: testArray[i].x + dir.x, y: testArray[i].y + dir.y}
-      } else {
-        testArray[i] = testArray[i-1];
-      }
-    }
-    if (testArray[0].x == food.x && testArray[0].y == food.y) {
-      testArray.push(food);
-      setFood({});
+    const currentDir = dirRef.current;
+
+    setSnake(snake => {
+      const newSnake = snake.map((item, index) => {
+        if (index == 0) {
+          return {
+            x: item.x + currentDir.x,
+            y: item.y + currentDir.y
+          };
+        }
+         return {...snake[index-1]};
+      });
+      return newSnake;
+    })
+
+    //food department
+    const currentSnake = snakeRef.current;
+    if (currentSnake[0].x == food.x && currentSnake[0].y == food.y) {
+      console.log(`Found food at x: ${currentSnake[0].x} y: ${currentSnake[0].y}`, {...food})
+      setSnake(snake => [...snake, {...food}]);
       spawnFood();
     }
-    // console.log(JSON.parse(JSON.stringify(testArray)));
+
+    //handle wall collisions  with reload page
+   if (snakeRef.current[0].x < 0 || snakeRef.current[0].y < 0 || snakeRef.current[0].x >= props.width || snakeRef.current[0].y >= props.height) return window.location.reload(); //change reload later to main menue screen
+
+   //handle self collisions with reload page
+   const head = snakeRef.current[0];
+   if (snakeRef.current.slice(1).some(snake => snake.x === head.x && snake.y === head.y)) return window.location.reload(); //change reload later to main menue screen
+
   }
 
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
         direction(event.key);
-        console.log('Key pressed:', event.key);
+        console.log('Key pressed:', event.key, props.width);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -62,12 +98,18 @@ export default function Canvas(props) {
   }, []);
 
   const drawSnake = (context) => {
-    context.clearRect(0,0,context.canvas.width, context.canvas.height);
-    context.fillStyle = 'orange';
-
+    context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+    context.clear
     //drawSnake each element
-    testArray.forEach(element => {
-      context.fillRect(element.x, element.y, 9, 9);
+    snakeRef.current.forEach((element, index) => {
+      if (index == 0) {
+        context.fillStyle = 'orange';
+        context.fillRect(element.x, element.y, 9, 9);
+        context.fillStyle = 'yellow';
+      } else {
+        context.fillRect(element.x, element.y, 9, 9);
+      }
+
     });
   }
 
@@ -97,11 +139,11 @@ export default function Canvas(props) {
     }
     render()
     return () => window.cancelAnimationFrame(animationID);
-  },[])
+  },[food])
 
   return (
     <>
-    <canvas ref={ref} {...props}></canvas>
+    <canvas id='canvas' ref={ref} {...props}></canvas>
     </>
   )
 }
