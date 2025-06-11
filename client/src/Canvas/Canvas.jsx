@@ -5,10 +5,25 @@ import {
   update,
   drawSnake,
   drawFood,
-  resetGame
+  resetGame,
+  submitScore,
 } from '../Gamelogic/Gamelogic';
+import './canvas.css';
+
 
 export default function Canvas(props) {
+    const {
+    width,
+    height,
+    style,
+    fetchData,
+    leaderboard,
+    showLeaderboard,
+    hideLeaderboard,
+    toggleMute,
+    muted,
+    startMusic
+  } = props;
   const ref = useRef();
 
   const [dir, setDir] = useState({ x: 10, y: 0 });
@@ -21,10 +36,12 @@ export default function Canvas(props) {
   ]);
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
-
+  const [gameStarted, setGameStarted] = useState(false);
   const snakeRef = useRef(snake);
   const dirRef = useRef(dir);
   const lastInputRef = useRef(dir);
+  const [userName, setUserName] = useState('');
+  const [scoreSubmitted, setScoreSubmitted] = useState(false);
 
   useEffect(() => {
     dirRef.current = dir;
@@ -36,9 +53,9 @@ export default function Canvas(props) {
 
   useEffect(() => {
     const handleKeyDown = (event) => {
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight','w','s','a','d'].includes(event.key)) {
         direction(event.key, dirRef, lastInputRef, setDir);
-        console.log('Key pressed:', event.key, props.width);
+        console.log('Key pressed:', event.key);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -51,12 +68,12 @@ export default function Canvas(props) {
 
 
     const wrappedSpawnFood = () =>
-      spawnFood(props.width, props.height, snakeRef, setFood);
+      spawnFood(width, height, snakeRef, setFood);
 
     // manual update call
-    update(snakeRef, dirRef, setSnake, props, food, setScore, wrappedSpawnFood, setGameOver);
+    update(snakeRef, dirRef, setSnake, {width, height}, food, setScore, wrappedSpawnFood, setGameOver);
     const interval = setInterval(() => {
-      update(snakeRef, dirRef, setSnake, props, food, setScore, wrappedSpawnFood, setGameOver);
+      update(snakeRef, dirRef, setSnake, {width, height}, food, setScore, wrappedSpawnFood, setGameOver);
     }, 100);
 
     return () => clearInterval(interval);
@@ -65,6 +82,7 @@ export default function Canvas(props) {
 
   useEffect(() => {
     const canvas = ref.current;
+    if (!canvas) return;
     const context = canvas.getContext('2d');
     let animationID;
 
@@ -83,24 +101,95 @@ export default function Canvas(props) {
     setGameOver(true);
   }
 
+
   return (
     <>
-    {!gameOver &&
-    <div id='running'>
-      <p>Score: {score}</p>
-      <button id='cancel' onClick={cancel}>X</button>
-      <canvas id='canvas' ref={ref} {...props}></canvas>
-    </div>
-    }
+      {!gameStarted && (
+        <div id="stopped">
+          <h2 id="welcome">Welcome to Snakesss</h2>
+          <button id="restart" onClick={() => {
+            startMusic();
+            setGameStarted(true);
+            resetGame(setSnake, setDir, setScore, setFood, setGameOver, snakeRef, dirRef, lastInputRef, setScoreSubmitted);
+          }}>
+            Start Game
+          </button>
+        </div>
+      )}
 
-    {gameOver  &&
-    <div id='stopped' style={{ color: 'white', textAlign: 'center', display: 'flex', flexDirection: 'column', width: '100px' }}>
-      <h2 id='gameover'>Game Over</h2>
-      <p id='score'>Your score: {score}</p>
-      <button id='restart' onClick={() => resetGame(setSnake, setDir, setScore, setFood, setGameOver, snakeRef, dirRef, lastInputRef)}>Start New Game</button>
-      <button id='leaderboard' onClick={() => alert('Leaderboard coming soon!')}>Leaderboard</button>
-    </div>
-    }
+      {gameStarted && !gameOver && (
+        <div id='running'>
+          <div id='runningButtons'>
+          <button id='cancel' onClick={cancel}>X</button>
+            <button id="mute" onClick={toggleMute}>
+                {muted ? '🔇' : '🔊'}
+            </button>
+          </div>
+          <canvas
+            id='canvas'
+            ref={ref}
+            width={width}
+            height={height}
+            style={style}
+          />
+        </div>
+      )}
+
+      {gameStarted && gameOver && (
+        <div id='stopped'>
+          <h2 id='gameover'>Game Over</h2>
+          <p id='score'>Your score: {score}</p>
+
+          {!showLeaderboard && (
+            <>
+            {score > 0 && (
+              scoreSubmitted ? (
+                <p>Your score has been submitted.</p>
+              ) : (
+                <div id='scoreInput'>
+
+                  <input
+                    type="text"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    placeholder="Enter your name"
+                    maxLength={20}
+                  />
+                  <button onClick={() => {
+                    submitScore(userName, score, setScoreSubmitted);
+                    setUserName('');
+                  }}>Submit score</button>
+                </div>
+              )
+            )}
+
+              <button id='restart' onClick={() => {
+                setGameStarted(true);
+                resetGame(setSnake, setDir, setScore, setFood, setGameOver, snakeRef, dirRef, lastInputRef, setScoreSubmitted);
+              }}>
+                Start New Game
+              </button>
+
+              <button id='leaderboard' onClick={fetchData}>Leaderboard</button>
+            </>
+          )}
+
+          {showLeaderboard && (
+            <div id='leaderboard-box'>
+              <h3>Top 10 Players</h3>
+              <ol>
+                {leaderboard.map((user, index) => (
+                  <li key={index}>
+                    {user.userName} — {user.highScore}
+                  </li>
+                ))}
+              </ol>
+              <button onClick={hideLeaderboard}>Hide Leaderboard</button>
+            </div>
+          )}
+        </div>
+      )}
     </>
   );
+
 }

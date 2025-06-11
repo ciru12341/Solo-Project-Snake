@@ -8,7 +8,6 @@ export function spawnFood(width, height, snakeRef, setFood) {
   if (snakeRef.current.some(seg => seg.x === newFood.x && seg.y === newFood.y)) {
     spawnFood(width, height, snakeRef, setFood);
   } else {
-    console.log(`Food spawned at: x: ${newFood.x} y: ${newFood.y}`);
     setFood(newFood);
   }
 }
@@ -19,10 +18,10 @@ export function direction(key, dirRef, lastInputRef, setDir) {
 
   let newDir = null;
 
-  if (key === 'ArrowUp' && current.y === 0) newDir = { x: 0, y: -10 };
-  else if (key === 'ArrowDown' && current.y === 0) newDir = { x: 0, y: 10 };
-  else if (key === 'ArrowLeft' && current.x === 0) newDir = { x: -10, y: 0 };
-  else if (key === 'ArrowRight' && current.x === 0) newDir = { x: 10, y: 0 };
+  if ((key === 'ArrowUp' || key === 'w')&& current.y === 0) newDir = { x: 0, y: -10 };
+  else if ((key === 'ArrowDown' || key === 's')&& current.y === 0) newDir = { x: 0, y: 10 };
+  else if ((key === 'ArrowLeft' || key === 'a')&& current.x === 0) newDir = { x: -10, y: 0 };
+  else if ((key === 'ArrowRight' || key === 'd') && current.x === 0) newDir = { x: 10, y: 0 };
   else return;
 
   if (newDir.x === lastInput.x && newDir.y === lastInput.y) return;
@@ -60,7 +59,6 @@ export function update(snakeRef, dirRef, setSnake, props, food, setScore, spawnF
   const snake = snakeRef.current;
   const head = snake[0];
   if (head.x === food.x && head.y === food.y) {
-    console.log(`Found food at x: ${head.x} y: ${head.y}`, { ...food });
     setSnake(prev => [...prev, { ...food }]);
     setScore(prev => prev + 1);
     spawnFoodFn();
@@ -80,7 +78,7 @@ export function drawFood(context, food) {
   context.fillRect(food.x, food.y, 9, 9);
 }
 
-export function resetGame(setSnake, setDir, setScore, setFood, setGameOver, snakeRef, dirRef, lastInputRef) {
+export function resetGame(setSnake, setDir, setScore, setFood, setGameOver, snakeRef, dirRef, lastInputRef, setScoreSubmitted) {
   const initialSnake = [
     { x: 40, y: 20 },
     { x: 40, y: 10 },
@@ -92,11 +90,39 @@ export function resetGame(setSnake, setDir, setScore, setFood, setGameOver, snak
 
   setSnake(initialSnake);
   setDir(initialDir);
-  setScore(4);
+  setScore(0);
   setFood(initialFood);
   setGameOver(false);
+  setScoreSubmitted(false);
 
   snakeRef.current = initialSnake;
   dirRef.current = initialDir;
   lastInputRef.current = initialDir;
+}
+
+export async function submitScore(userName, score, setScoreSubmitted) {
+
+  const cleanedName = userName
+    .trim()
+    .replace(/[^a-zA-Z0-9_]/g, '')
+    .slice(0, 20);
+
+  if (!cleanedName) {
+    alert('Please enter your name.');
+    return;
+  }
+
+  try {
+    const res = await fetch('http://localhost:3001/Leaderboard', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userName: userName.trim(), highScore: score })
+    });
+    const data = await res.json();
+    console.log('Score submitted:', data);
+    setScoreSubmitted(true);
+  } catch (error) {
+    console.error('Failed to submit score:', error);
+    alert('Something went wrong while submitting your score.');
+  }
 }
