@@ -122,7 +122,6 @@ export async function submitScore(userName, score, setScoreSubmitted) {
     console.log('Score submitted:', data);
     setScoreSubmitted(true);
   } catch (error) {
-    console.error('Failed to submit score:', error);
-    alert('Something went wrong while submitting your score.');
+    console.log('Failed to submit score:', error);
   }
 }

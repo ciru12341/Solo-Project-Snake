@@ -26,7 +26,7 @@ function App() {
     if (!audioRef.current) {
       const audio = new Audio(music);
       audio.loop = true;
-      audio.volume = 0.3;
+      audio.volume = 0.1;
       audio.muted = muted;
       audioRef.current = audio;
 
